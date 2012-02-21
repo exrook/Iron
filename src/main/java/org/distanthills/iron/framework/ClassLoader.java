@@ -7,6 +7,7 @@ import java.io.File;
 
 public class ClassLoader implements ComponentLoader {
 	private URLClassLoader loader;
+	private Collection<Component> comps = new LinkedList<Component>();
 	
 	public ClassLoader(URL directory) {
 		URL[] directories = new URL[1];
@@ -20,7 +21,7 @@ public class ClassLoader implements ComponentLoader {
 		for (URL url:loader.getURLs()) {
 			File file = new File(url.getPath());
 			for (File cf: file.listFiles()) {
-				if (cf.isFile() & cf.getName().endsWith(".class")) {
+				if (cf.isFile() & cf.getName().toLowerCase().endsWith(".class")) {
 					try {
 						clas.add(loader.loadClass(cf.getName().substring(0, cf.getName().lastIndexOf('.'))));
 					} catch (ClassNotFoundException e) {
@@ -31,10 +32,12 @@ public class ClassLoader implements ComponentLoader {
 			}
 		}
 		for (@SuppressWarnings("rawtypes") Class classs:clas) {
-			if (classs.isInstance(Component.class)) {
+			if (Component.class.isAssignableFrom(classs)) {
 				Component comp = null;
 				try {
 					comp = (Component) classs.newInstance();
+					comp.onEnable();
+					comps.add(comp);
 				} catch (InstantiationException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -42,15 +45,19 @@ public class ClassLoader implements ComponentLoader {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				comp.onEnable();
 			}
 		}
 
 	}
 
 	public void unload() {
+		for (Component comp:comps) {
+			comp.onDisable();
+			comp.cleanup();
+			comp = null;
+		}
 		// TODO Auto-generated method stub
-
+		loader = null;
 	}
 
 }
